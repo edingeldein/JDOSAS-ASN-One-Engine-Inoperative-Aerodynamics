@@ -26,6 +26,9 @@ public class SeminoleController : MonoBehaviour
     public Side InopEngine;
     public PropMethod PropMethod;
     public GearState GearState;
+    public CtrlTechnique ControlTechnique;
+    [Range(0.1f,5f)] public float BankAngle;
+    [Range(0.1f,10f)] public float YawAngle;
 
     // private fields holding the state of the model
     private bool _updated;
@@ -39,7 +42,7 @@ public class SeminoleController : MonoBehaviour
 
     private void Awake()
     {
-        _seminoleWrap = new SeminoleWrapper(Seminole);
+        _seminoleWrap = new SeminoleWrapper(Seminole, BankAngle, YawAngle);
     }
 
     // Start is called before the first frame update
@@ -55,6 +58,8 @@ public class SeminoleController : MonoBehaviour
         if (GearState == GearState.Up) _seminoleWrap.GearUp();
         else _seminoleWrap.GearDown();
 
+        _seminoleWrap.SetOrientation(ControlTechnique, InopEngine);
+
     }
 
     // Update is called once per frame
@@ -64,23 +69,35 @@ public class SeminoleController : MonoBehaviour
     }
 
     public void SwitchEngine() => _seminoleWrap.SwitchEngine();
+    public void ToggleOrientation() => _seminoleWrap.ToggleOrientation();
+    public void ToggleCtrlTech() => _seminoleWrap.ToggleCtrlTech();
     public void ToggleAnimation() => _seminoleWrap.ToggleAnimation();
     public void ToggleGear() => _seminoleWrap.ToggleGear();
+
 }
 
 public class SeminoleWrapper
-{
+{    
     private Transform _transform;
+    private Transform _centerline;
     private Animator _anim;
     private Propeller _left;
     private Propeller _right;
     private Gear _landingGear;
+    private float _bankAngle;
+    private float _yawAngle;
+    private Side _inopEngine;
+    private OrientDir _direction;
+    private CtrlTechnique _ctrlTech;
     private bool _animating => _anim.speed > 0;
 
-    public SeminoleWrapper(GameObject seminole)
+    public SeminoleWrapper(GameObject seminole, float bankAngle, float yawAngle)
     {
         _transform = seminole.GetComponent<Transform>();
-        _anim = seminole.GetComponent<Animator>();        
+        _centerline = GameObject.FindGameObjectWithTag("Centerline")?.transform;
+        _anim = seminole.GetComponent<Animator>();
+        _bankAngle = bankAngle;
+        _yawAngle = yawAngle;
         ConfigureProps();
         ConfigureGear();
     }
@@ -129,6 +146,104 @@ public class SeminoleWrapper
 
         _left = new Propeller(leftPropBlades, leftSpinningProp);
         _right = new Propeller(rightPropBlades, rightSpinningProp);
+    }
+
+    public void ToggleOrientation()
+    {
+        if(_ctrlTech == CtrlTechnique.WingsLevel)
+        {
+            Level();
+            ToggleYaw();
+        }
+        else
+        {
+            NoSlip();
+            ToggleBank();
+        }
+    }
+
+    public void SetOrientation(CtrlTechnique ctrlTech, Side inopEngine)
+    {
+        _ctrlTech = ctrlTech;
+        _direction = (inopEngine == Side.Left) ? OrientDir.Right : OrientDir.Left;
+        Reorient();
+    }
+
+    public void Reorient()
+    {
+        if(_ctrlTech == CtrlTechnique.WingsLevel)
+        {
+            Level();
+            if (_direction == OrientDir.Left) YawLeft(_yawAngle);
+            else YawRight(_yawAngle);
+        }
+        else
+        {
+            NoSlip();
+            if (_direction == OrientDir.Left) BankLeft(_bankAngle);
+            else BankRight(_bankAngle);
+        }
+    }
+
+    public void ToggleCtrlTech()
+    {
+        _ctrlTech = (_ctrlTech == CtrlTechnique.WingsLevel) 
+            ? CtrlTechnique.ZeroSideSlip : CtrlTechnique.WingsLevel;
+        Reorient();
+    }
+
+    public void ToggleBank()
+    {
+        if (_direction == OrientDir.Left) BankRight(_bankAngle);
+        else BankLeft(_bankAngle);
+    }
+
+    public void BankLeft(float angle)
+    {
+        Bank(angle);
+        _direction = OrientDir.Left;
+    }
+
+    public void BankRight(float angle)
+    {
+        Bank(-1f * angle);
+        _direction = OrientDir.Right;
+    }
+
+    public void Level()
+    {
+        Bank(0f);
+    }
+
+    private void Bank(float angle)
+    {
+        _transform.rotation = Quaternion.Euler(0f, 0f, angle);
+    }
+
+    public void ToggleYaw()
+    {
+        if (_direction == OrientDir.Right) YawLeft(_bankAngle);
+        else YawRight(_bankAngle);
+    }
+
+    public void YawLeft(float angle)
+    {
+        Yaw(-1f * angle);
+        _direction = OrientDir.Left;
+    }
+
+    public void YawRight(float angle)
+    {
+        Yaw(angle);
+        _direction = OrientDir.Right;
+    }
+
+    public void NoSlip() => Yaw(0f);
+
+    public void Yaw(float angle)
+    {
+        _transform.rotation = Quaternion.Euler(0f, angle, 0f);
+        _centerline.rotation = Quaternion.Euler(0f, angle, 0f);
     }
 
     public void ToggleGear() => _landingGear.Toggle();
@@ -221,7 +336,11 @@ public class Gear
 
 public enum Side
 { Left, Right }
+public enum OrientDir
+{ Left,Right }
 public enum PropMethod
 { Windmill, Feather }
 public enum GearState
 { Up, Down }
+public enum CtrlTechnique
+{ WingsLevel, ZeroSideSlip }
