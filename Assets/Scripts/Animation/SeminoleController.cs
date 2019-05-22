@@ -25,6 +25,7 @@ public class SeminoleController : MonoBehaviour
     // Inspector config variables
     public Side InopEngine;
     public PropMethod PropMethod;
+    public GearState GearState;
 
     // private fields holding the state of the model
     private bool _updated;
@@ -51,6 +52,9 @@ public class SeminoleController : MonoBehaviour
         if (PropMethod == PropMethod.Feather) _seminoleWrap.SetAnimationSpeed(0);
         else _seminoleWrap.SetAnimationSpeed(1);
 
+        if (GearState == GearState.Up) _seminoleWrap.GearUp();
+        else _seminoleWrap.GearDown();
+
     }
 
     // Update is called once per frame
@@ -61,7 +65,7 @@ public class SeminoleController : MonoBehaviour
 
     public void SwitchEngine() => _seminoleWrap.SwitchEngine();
     public void ToggleAnimation() => _seminoleWrap.ToggleAnimation();
-
+    public void ToggleGear() => _seminoleWrap.ToggleGear();
 }
 
 public class SeminoleWrapper
@@ -70,6 +74,7 @@ public class SeminoleWrapper
     private Animator _anim;
     private Propeller _left;
     private Propeller _right;
+    private Gear _landingGear;
     private bool _animating => _anim.speed > 0;
 
     public SeminoleWrapper(GameObject seminole)
@@ -77,6 +82,7 @@ public class SeminoleWrapper
         _transform = seminole.GetComponent<Transform>();
         _anim = seminole.GetComponent<Animator>();        
         ConfigureProps();
+        ConfigureGear();
     }
 
     public void ToggleAnimation()
@@ -124,6 +130,18 @@ public class SeminoleWrapper
         _left = new Propeller(leftPropBlades, leftSpinningProp);
         _right = new Propeller(rightPropBlades, rightSpinningProp);
     }
+
+    public void ToggleGear() => _landingGear.Toggle();
+
+    public void GearUp() => _landingGear.SetUp();
+
+    public void GearDown() => _landingGear.SetDown();
+
+    private void ConfigureGear()
+    {
+        var gearAssm = new List<GameObject>(GameObject.FindGameObjectsWithTag("Gear"));
+        _landingGear = new Gear(gearAssm);
+    }
 }
 
 /// <summary>
@@ -165,9 +183,45 @@ public class Propeller
     }
 }
 
+public class Gear
+{
+    private List<GameObject> _gearParts;
+    private bool _down;
+
+    public Gear(List<GameObject> gearParts)
+    {
+        _gearParts = gearParts;
+        _down = true;
+    }
+
+    public void Toggle()
+    {
+        if (_down) SetUp();
+        else SetDown();
+    }
+
+    public void SetUp()
+    {
+        Set(false);
+        _down = false;
+    }
+
+    public void SetDown()
+    {
+        Set(true);
+        _down = true;
+    }
+
+    private void Set(bool val)
+    {
+        foreach (var part in _gearParts)
+            part.SetActive(val);
+    }
+}
+
 public enum Side
 { Left, Right }
 public enum PropMethod
 { Windmill, Feather }
-public enum Gear
+public enum GearState
 { Up, Down }

@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Propellers
   - Centerline
+  - Gear
   layers:
   - Default
   - TransparentFX
