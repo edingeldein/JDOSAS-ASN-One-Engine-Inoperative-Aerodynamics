@@ -25,16 +25,6 @@ public class SeminoleController : MonoBehaviour
     [Range(0.1f,5f)] public float BankAngle;
     [Range(0.1f,10f)] public float YawAngle;
 
-    // private fields holding the state of the model
-    private bool _updated;
-    private int _power;
-    private int _densityAlt;
-    private int _airspeed;
-    private int _weight;
-    private int _cog;
-    private int _flaps;
-    private Gear _landingGear;
-
     private void Awake()
     {
         _seminoleModel = new SeminoleModel(Seminole, BankAngle, YawAngle);
@@ -82,7 +72,7 @@ public class SeminoleModel
     private float _bankAngle;
     private float _yawAngle;
     private Side _inopEngine;
-    private OrientDir _direction;
+    private Side _direction;
     private CtrlTechnique _ctrlTech;
     private bool _animating => _anim.speed > 0;
 
@@ -163,18 +153,18 @@ public class SeminoleModel
     public void BankLeft(float angle)
     {
         Bank(angle);
-        _direction = OrientDir.Left;
+        _direction = Side.Left;
     }
 
     public void BankRight(float angle)
     {
         Bank(-1f * angle);
-        _direction = OrientDir.Right;
+        _direction = Side.Right;
     }
 
     public void ToggleBank()
     {
-        if (_direction == OrientDir.Left) BankRight(_bankAngle);
+        if (_direction == Side.Left) BankRight(_bankAngle);
         else BankLeft(_bankAngle);
     }
 
@@ -193,18 +183,18 @@ public class SeminoleModel
     public void YawLeft(float angle)
     {
         Yaw(-1f * angle);
-        _direction = OrientDir.Left;
+        _direction = Side.Left;
     }
 
     public void YawRight(float angle)
     {
         Yaw(angle);
-        _direction = OrientDir.Right;
+        _direction = Side.Right;
     }
 
     public void ToggleYaw()
     {
-        if (_direction == OrientDir.Right) YawLeft(_bankAngle);
+        if (_direction == Side.Right) YawLeft(_bankAngle);
         else YawRight(_bankAngle);
     }
 
@@ -217,13 +207,13 @@ public class SeminoleModel
         if (_ctrlTech == CtrlTechnique.WingsLevel)
         {
             Level();
-            if (_direction == OrientDir.Left) YawLeft(_yawAngle);
+            if (_direction == Side.Left) YawLeft(_yawAngle);
             else YawRight(_yawAngle);
         }
         else
         {
             NoSlip();
-            if (_direction == OrientDir.Left) BankLeft(_bankAngle);
+            if (_direction == Side.Left) BankLeft(_bankAngle);
             else BankRight(_bankAngle);
         }
     }
@@ -231,7 +221,7 @@ public class SeminoleModel
     public void SetOrientation(CtrlTechnique ctrlTech, Side inopEngine)
     {
         _ctrlTech = ctrlTech;
-        _direction = (inopEngine == Side.Left) ? OrientDir.Right : OrientDir.Left;
+        _direction = (inopEngine == Side.Left) ? Side.Right : Side.Left;
         Reorient();
     }
 
@@ -355,8 +345,6 @@ public class Gear
 
 public enum Side
 { Left, Right }
-public enum OrientDir
-{ Left,Right }
 public enum PropMethod
 { Windmill, Feather }
 public enum GearState

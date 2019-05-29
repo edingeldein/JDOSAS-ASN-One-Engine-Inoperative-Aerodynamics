@@ -5,11 +5,16 @@ using UnityEngine.UI;
 
 public class ToggleScale : MonoBehaviour
 {
+    public int StartingIndex;
     public Transform ObjToAnimate;
     public List<Vector3> Positions;
     
-    [SerializeField]
     private int _index;
+
+    private void Start()
+    {
+        _index = StartingIndex;
+    }
 
     public void SetIndex(int i)
     {
